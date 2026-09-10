@@ -18,9 +18,9 @@ Locally, the containers use Docker's `host.docker.internal` name: status reads W
 
 Copy `.env.example` to `.env`, set the public HTTPS Watcher URL, Cake Project home URL, and a long random `STATUS_ADMIN_TOKEN`, then start Docker Compose. Configure Watcher with the same token and this service's private or public HTTPS URL. The container binds only to loopback; terminate HTTPS in a separately managed reverse proxy.
 
-An nginx example is available at `deploy/nginx.conf.example`. Replace `status.example.com` with the dedicated status hostname and provision its TLS certificate before enabling the file.
+The nginx example at `deploy/nginx.conf.example` is configured for `statuscake.shmoza.net`. Point that hostname to the status server and provision its TLS certificate before enabling the file.
 
-Use separate hostnames for production, ideally with DNS records pointing to different servers, for example `cake.shmoza.net` for Watcher and `status.cake.shmoza.net` for status. They may share one parent domain. Using one exact hostname with different URL paths requires a common reverse proxy and creates a shared failure point, so it is not recommended for an independent status page.
+Use separate hostnames for production, ideally with DNS records pointing to different servers: `cake.shmoza.net` for Watcher and `statuscake.shmoza.net` for status. They share the `shmoza.net` DNS zone but remain independent hosts. Using one exact hostname with different URL paths requires a common reverse proxy and creates a shared failure point, so it is not recommended for an independent status page.
 
 When upstream is reachable, the response is sanitized and cached. When it is unavailable:
 
