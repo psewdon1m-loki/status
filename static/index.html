@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="color-scheme" content="dark">
+  <meta name="theme-color" content="#000000">
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; base-uri 'none'; form-action 'none'; connect-src 'self'; img-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; script-src 'self'">
+  <meta name="description" content="Текущее состояние сервисов Cake Project.">
+  <meta name="robots" content="index, follow">
+  <title>Cake Project — статус сервисов</title>
+  <link rel="icon" type="image/png" sizes="277x277" href="/assets/favicon.png?v=1">
+  <link rel="apple-touch-icon" sizes="277x277" href="/assets/favicon.png?v=1">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&amp;display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=2">
+</head>
+<body>
+  <header class="site-header">
+    <a class="channel-state" href="https://cake.shmoza.net/initialize/" data-home-link data-i18n-aria-label="backAria">
+      <span id="stateMarker" class="state-marker unknown" aria-hidden="true"></span>
+      <span id="channelText">ПОЛУЧАЕМ ДАННЫЕ</span>
+    </a>
+    <time id="designTime" class="design-time">-- -------- ---- -- -- --</time>
+  </header>
+
+  <div class="page-rail" aria-hidden="true"></div>
+
+  <main class="status-stage">
+    <div class="brand-lockup">
+      <a class="cake-mark" href="https://cake.shmoza.net/initialize/" data-home-link data-i18n-aria-label="backAria">
+        <img src="/assets/cake-mark.png" alt="">
+      </a>
+      <h1>cake project</h1>
+    </div>
+
+    <section class="status-overview" aria-labelledby="statusHeadline">
+      <div class="overview-copy">
+        <p class="eyebrow" data-i18n="eyebrow">СТАТУС ИНФРАСТРУКТУРЫ / LIVE</p>
+        <h2 id="statusHeadline">Проверяем<br>сервисы</h2>
+        <p id="summaryText" class="summary" role="status" aria-live="polite">Получаем актуальное состояние инфраструктуры.</p>
+        <time id="checkedAt" class="checked-at"></time>
+      </div>
+
+      <div class="overall-zone">
+        <span class="overall-caption" data-i18n="overallCaption">ОБЩЕЕ СОСТОЯНИЕ</span>
+        <div id="overallCard" class="overall-card unknown">
+          <span class="overall-index" aria-hidden="true">01</span>
+          <span id="overallStatus" class="overall-label">Проверяем</span>
+          <span class="overall-arrow" aria-hidden="true">→</span>
+        </div>
+        <p class="refresh-note"><span data-i18n="autoRefresh">АВТООБНОВЛЕНИЕ</span> · <span id="refreshCountdown">30</span> <span data-i18n="secondsShort">СЕК</span></p>
+      </div>
+    </section>
+
+    <section class="components-board" aria-labelledby="componentsTitle">
+      <header class="components-head">
+        <p id="componentsTitle" class="eyebrow" data-i18n="componentsTitle">КОНТРОЛИРУЕМЫЕ КОМПОНЕНТЫ / 4</p>
+        <span id="componentsMeta" class="components-meta">—</span>
+      </header>
+      <div id="componentList" class="component-list" aria-live="polite">
+        <div class="loading-row" data-i18n="loading">Загружаем состояние сервисов…</div>
+      </div>
+    </section>
+  </main>
+
+  <footer class="site-footer">
+    <span class="footer-project">CAKE PROJECT</span>
+    <a class="back-link" href="https://cake.shmoza.net/initialize/" data-home-link data-i18n="back">ПЕРСОНАЛЬНОЕ ПОДКЛЮЧЕНИЕ</a>
+    <div class="language-switch" role="group" aria-label="Выбор языка" data-i18n-aria-label="languageAria">
+      <button type="button" data-language="en" aria-pressed="false">ENG</button>
+      <span aria-hidden="true">/</span>
+      <button type="button" data-language="ru" aria-pressed="true">RUS</button>
+    </div>
+  </footer>
+
+  <script src="app.js?v=2"></script>
+</body>
+</html>

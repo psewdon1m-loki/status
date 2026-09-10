@@ -1,0 +1,35 @@
+services:
+  status:
+    build:
+      context: .
+    image: cake-status:local
+    restart: unless-stopped
+    environment:
+      STATUS_UPSTREAM_URL: ${STATUS_UPSTREAM_URL:-http://host.docker.internal:18080/api/v1/public/status}
+      STATUS_ALLOW_HTTP_UPSTREAM: ${STATUS_ALLOW_HTTP_UPSTREAM:-1}
+      STATUS_HOME_URL: ${STATUS_HOME_URL:-http://127.0.0.1:18081/initialize/}
+      STATUS_POLL_INTERVAL_SECONDS: ${STATUS_POLL_INTERVAL_SECONDS:-30}
+      STATUS_UPSTREAM_TIMEOUT_SECONDS: ${STATUS_UPSTREAM_TIMEOUT_SECONDS:-8}
+      STATUS_CACHE_PATH: /data/status-cache.json
+    extra_hosts:
+      - host.docker.internal:host-gateway
+    ports:
+      - 127.0.0.1:${STATUS_PORT:-18082}:8080
+    volumes:
+      - status-data:/data
+    read_only: true
+    tmpfs:
+      - /tmp:size=16m,mode=1777
+    cap_drop:
+      - ALL
+    security_opt:
+      - no-new-privileges:true
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8080/health', timeout=3).read()"]
+      interval: 15s
+      timeout: 5s
+      retries: 3
+      start_period: 5s
+
+volumes:
+  status-data:

@@ -1,0 +1,1 @@
+"""Cake Status service."""
