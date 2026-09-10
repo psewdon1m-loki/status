@@ -39,15 +39,45 @@ class StatusServiceTests(unittest.TestCase):
         self.assertNotIn("must-not-survive", serialized)
         self.assertNotIn("secret.example", serialized)
 
-    def test_offline_snapshot_marks_watcher_down_and_targets_unknown(self):
+    def test_offline_snapshot_keeps_independently_probed_targets(self):
         cached = app.sanitize_upstream_payload(self.upstream_payload(), "2026-09-10T12:00:01+00:00")
-        result = app.offline_payload(cached, "2026-09-10T12:01:00+00:00", "2026-09-10T12:00:01+00:00")
+        offline = app.offline_payload(cached, "2026-09-10T12:01:00+00:00", "2026-09-10T12:00:01+00:00")
+        result = app.apply_target_results(
+            offline,
+            [
+                {
+                    "label": "Netherlands",
+                    "status": "operational",
+                    "message": "Работает",
+                    "checkedAt": "2026-09-10T12:01:00+00:00",
+                }
+            ],
+            "2026-09-10T12:01:00+00:00",
+        )
         components = {item["key"]: item for item in result["components"]}
         self.assertEqual("major_outage", result["overallStatus"])
         self.assertFalse(result["upstreamAvailable"])
         self.assertEqual("major_outage", components["connection"]["status"])
-        self.assertEqual("unknown", components["specific_connections"]["status"])
-        self.assertEqual("unknown", components["specific_connections"]["details"][0]["status"])
+        self.assertEqual("operational", components["specific_connections"]["status"])
+        self.assertEqual("operational", components["specific_connections"]["details"][0]["status"])
+
+    def test_normalize_targets_deduplicates_endpoints(self):
+        targets = app.normalize_targets(
+            [
+                {"configurationKey": "a" * 64, "label": "Primary", "host": "EXAMPLE.COM", "port": 443},
+                {"configurationKey": "b" * 64, "label": "Duplicate", "host": "example.com", "port": "443"},
+            ]
+        )
+        self.assertEqual(
+            [{"configurationKey": "a" * 64, "label": "Primary", "host": "example.com", "port": 443}],
+            targets,
+        )
+
+    def test_normalize_targets_rejects_unsafe_host(self):
+        with self.assertRaisesRegex(ValueError, "invalid_target_endpoint"):
+            app.normalize_targets(
+                [{"configurationKey": "a" * 64, "label": "Target", "host": "user@example.com", "port": 443}]
+            )
 
     def test_static_page_contains_no_connection_secrets(self):
         combined = "\n".join((ROOT / "static" / name).read_text(encoding="utf-8") for name in ("index.html", "app.js", "styles.css"))
