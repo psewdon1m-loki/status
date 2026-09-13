@@ -1,0 +1,106 @@
+name: release
+
+on:
+  push:
+    tags: ["status-v*.*.*"]
+
+permissions:
+  contents: write
+  packages: write
+  id-token: write
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+      - uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5
+        with:
+          python-version: "3.12"
+      - name: Validate release tag and test
+        id: version
+        shell: bash
+        run: |
+          [[ "$GITHUB_REF_NAME" =~ ^status-v([0-9]+)\.([0-9]+)\.([0-9]+)$ ]]
+          echo "value=${GITHUB_REF_NAME#status-v}" >> "$GITHUB_OUTPUT"
+          git rev-parse "$GITHUB_REF_NAME^{commit}" >/dev/null
+          test "$(cat VERSION)" = "${GITHUB_REF_NAME#status-v}"
+          bash -n deploy/install.sh deploy/statusctl scripts/smoke_reality.sh
+          python -m py_compile service/*.py deploy/*.py scripts/*.py
+          node --check static/app.js
+          python -m unittest discover -s tests -v
+          docker compose config --quiet
+      - uses: docker/setup-buildx-action@8d2750c68a42422c14e847fe6c8ac0403b4cbd6f # v3
+      - uses: docker/login-action@c94ce9fb468520275223c153574b00df6fe4bcc9 # v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+      - name: Build and publish once
+        id: image
+        uses: docker/build-push-action@10e90e3645eae34f1e60eeb005ba3a3d33f178e8 # v6
+        with:
+          context: .
+          push: true
+          tags: ghcr.io/${{ github.repository_owner }}/cake-status:candidate-${{ github.sha }}
+          provenance: mode=max
+          sbom: true
+          build-args: STATUS_VERSION=${{ steps.version.outputs.value }}
+      - name: Scan exact published image
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          image-ref: ghcr.io/${{ github.repository_owner }}/cake-status@${{ steps.image.outputs.digest }}
+          scanners: vuln,secret
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          hide-progress: true
+      - name: Smoke exact published digest
+        env:
+          STATUS_IMAGE: ghcr.io/${{ github.repository_owner }}/cake-status@${{ steps.image.outputs.digest }}
+        run: |
+          docker run --rm --entrypoint python "$STATUS_IMAGE" /app/service/selftest.py
+          docker run -d --name cake-status-release -p 127.0.0.1:18082:8080 \
+            -e STATUS_ALLOW_HTTP_UPSTREAM=1 \
+            -e STATUS_UPSTREAM_URL=http://127.0.0.1:9/api/v1/public/status \
+            -e STATUS_ALLOWED_HOSTS=statuscake.shmoza.net,127.0.0.1,localhost \
+            "$STATUS_IMAGE"
+          for attempt in $(seq 1 30); do
+            if curl --fail --silent -H 'Host: statuscake.shmoza.net' http://127.0.0.1:18082/readyz >/dev/null; then break; fi
+            sleep 1
+          done
+          curl --fail --silent -H 'Host: statuscake.shmoza.net' http://127.0.0.1:18082/readyz
+          curl --fail --silent -H 'Host: statuscake.shmoza.net' http://127.0.0.1:18082/api/v1/public/status | python -c 'import json,sys; assert json.load(sys.stdin)["schemaVersion"] == 2'
+          bash scripts/smoke_reality.sh
+      - name: Promote tested digest
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+          STATUS_IMAGE: ghcr.io/${{ github.repository_owner }}/cake-status@${{ steps.image.outputs.digest }}
+        run: docker buildx imagetools create --tag "ghcr.io/${GITHUB_REPOSITORY_OWNER}/cake-status:${VERSION}" "$STATUS_IMAGE"
+      - name: Build release bundle and manifest
+        env:
+          VERSION: ${{ steps.version.outputs.value }}
+          STATUS_IMAGE: ghcr.io/${{ github.repository_owner }}/cake-status@${{ steps.image.outputs.digest }}
+        run: python scripts/build_release.py --version "$VERSION" --image "$STATUS_IMAGE" --base-url "https://github.com/${GITHUB_REPOSITORY}/releases/download/status-v${VERSION}" --output dist
+      - name: Scan release artifacts
+        uses: aquasecurity/trivy-action@ed142fd0673e97e23eac54620cfb913e5ce36c25 # v0.36.0
+        with:
+          scan-type: fs
+          scan-ref: dist
+          scanners: secret,misconfig
+          severity: HIGH,CRITICAL
+          exit-code: "1"
+          hide-progress: true
+          skip-setup-trivy: true
+      - name: Publish immutable source-tag release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release view "$GITHUB_REF_NAME" >/dev/null 2>&1 || gh release create "$GITHUB_REF_NAME" --verify-tag --title "Cake Status ${{ steps.version.outputs.value }}" --generate-notes
+          gh release upload "$GITHUB_REF_NAME" dist/* --clobber
+      - name: Stop smoke container
+        if: always()
+        run: docker rm -f cake-status-release >/dev/null 2>&1 || true

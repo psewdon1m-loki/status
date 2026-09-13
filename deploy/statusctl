@@ -1,0 +1,48 @@
+#!/usr/bin/env bash
+set -Eeuo pipefail
+
+INSTALL_DIR="${CAKE_STATUS_INSTALL_DIR:-/opt/cake-status}"
+ENV_FILE="${CAKE_STATUS_ENV:-/etc/cake-status/status.env}"
+COMPOSE_FILE="${INSTALL_DIR}/deploy/docker-compose.release.yml"
+
+compose() {
+  docker compose --env-file "${ENV_FILE}" -f "${COMPOSE_FILE}" "$@"
+}
+
+case "${1:-}" in
+  prepare|install|repair|status)
+    exec "${INSTALL_DIR}/deploy/install.sh" "$1"
+    ;;
+  update-check)
+    [[ $# -eq 2 ]] || { echo "usage: cake-status update-check X.Y.Z" >&2; exit 2; }
+    exec python3 "${INSTALL_DIR}/deploy/updater_client.py" check "$2"
+    ;;
+  update)
+    [[ $# -eq 2 ]] || { echo "usage: cake-status update X.Y.Z" >&2; exit 2; }
+    exec python3 "${INSTALL_DIR}/deploy/updater_client.py" apply "$2"
+    ;;
+  update-status)
+    [[ $# -eq 2 ]] || { echo "usage: cake-status update-status JOB_ID" >&2; exit 2; }
+    exec python3 "${INSTALL_DIR}/deploy/updater_client.py" status "$2"
+    ;;
+  backup)
+    [[ $# -eq 2 ]] || { echo "usage: cake-status backup /absolute/path.zip" >&2; exit 2; }
+    [[ "$2" = /* ]] || { echo "backup path must be absolute" >&2; exit 2; }
+    umask 077
+    compose exec -T status python /app/service/backup.py backup --output - > "$2"
+    echo "backup written to $2"
+    ;;
+  restore)
+    [[ $# -eq 2 && -f "$2" ]] || { echo "usage: cake-status restore /absolute/path.zip" >&2; exit 2; }
+    compose exec -T status python /app/service/backup.py restore --input - < "$2"
+    compose restart status
+    echo "backup restored; status service restarted"
+    ;;
+  logs)
+    compose logs --no-color --tail "${2:-200}" status
+    ;;
+  *)
+    echo "usage: cake-status {prepare|install|repair|status|update-check X.Y.Z|update X.Y.Z|update-status JOB_ID|backup PATH|restore PATH|logs [LINES]}" >&2
+    exit 2
+    ;;
+esac

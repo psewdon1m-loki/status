@@ -1,3 +1,11 @@
+@font-face {
+  font-family: "Space Grotesk";
+  src: url("/assets/SpaceGrotesk-Variable.ttf") format("truetype");
+  font-style: normal;
+  font-weight: 300 700;
+  font-display: swap;
+}
+
 :root {
   --dark: #000000;
   --light: #ffffff;
@@ -222,6 +230,19 @@ h2 {
   padding-top: 35px;
 }
 
+.summary-cards {
+  display: grid;
+  gap: 12px;
+}
+
+.summary-card-caption {
+  display: block;
+  margin-bottom: 6px;
+  color: var(--muted);
+  font-size: 9px;
+  line-height: 1;
+}
+
 .overall-caption {
   position: absolute;
   top: 18px;
@@ -234,7 +255,7 @@ h2 {
 .overall-card {
   --state-color: var(--accent);
   display: grid;
-  min-height: 107px;
+  min-height: 84px;
   grid-template-columns: 20px 1fr 23px;
   align-items: center;
   gap: 13px;

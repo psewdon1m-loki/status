@@ -4,6 +4,8 @@ const REFRESH_INTERVAL_SECONDS = 30;
 const componentList = document.querySelector("#componentList");
 const overallCard = document.querySelector("#overallCard");
 const overallStatus = document.querySelector("#overallStatus");
+const connectionsCard = document.querySelector("#connectionsCard");
+const connectionsStatus = document.querySelector("#connectionsStatus");
 const statusHeadline = document.querySelector("#statusHeadline");
 const summaryText = document.querySelector("#summaryText");
 const checkedAt = document.querySelector("#checkedAt");
@@ -29,6 +31,8 @@ const translations = {
     backAria: "Вернуться на главную страницу Cake Project",
     eyebrow: "СТАТУС ИНФРАСТРУКТУРЫ / LIVE",
     overallCaption: "ОБЩЕЕ СОСТОЯНИЕ",
+    servicesCaption: "СЕРВИСЫ CAKE",
+    connectionsCaption: "VPN-ПОДКЛЮЧЕНИЯ",
     autoRefresh: "АВТООБНОВЛЕНИЕ",
     secondsShort: "СЕК",
     componentsTitle: "КОНТРОЛИРУЕМЫЕ КОМПОНЕНТЫ / 4",
@@ -74,6 +78,10 @@ const translations = {
       major_outage: "Временно недоступно",
       unknown: "Ожидается проверка",
     },
+    checkMessages: {
+      unavailable: "Проверка недоступна",
+      not_configured: "Проверка не настроена",
+    },
     componentTitles: {
       connection: "Подключение к Loki",
       specific_connections: "Работоспособность конкретных подключений",
@@ -87,6 +95,8 @@ const translations = {
     backAria: "Return to the Cake Project home page",
     eyebrow: "INFRASTRUCTURE STATUS / LIVE",
     overallCaption: "OVERALL STATUS",
+    servicesCaption: "CAKE SERVICES",
+    connectionsCaption: "VPN CONNECTIONS",
     autoRefresh: "AUTO REFRESH",
     secondsShort: "SEC",
     componentsTitle: "MONITORED COMPONENTS / 4",
@@ -131,6 +141,10 @@ const translations = {
       partial_outage: "Partially unavailable",
       major_outage: "Temporarily unavailable",
       unknown: "Awaiting check",
+    },
+    checkMessages: {
+      unavailable: "Check unavailable",
+      not_configured: "Check not configured",
     },
     componentTitles: {
       connection: "Connection to Loki",
@@ -211,14 +225,21 @@ function componentTitle(component) {
   return translate(`componentTitles.${component.key}`) || component.title || component.key;
 }
 
+function componentMessage(component) {
+  if (component.checkStatus && component.checkStatus !== "completed") {
+    return translate(`checkMessages.${component.checkStatus}`) || translate("componentMessages.unknown");
+  }
+  return translate(`componentMessages.${normalizedStatus(component.status)}`);
+}
+
 function componentRow(component, index) {
   const status = normalizedStatus(component.status);
   const details = Array.isArray(component.details) ? component.details : [];
   return `<article class="component-row">
-    <span class="component-index" aria-hidden="true">${String(index + 2).padStart(2, "0")}</span>
+    <span class="component-index" aria-hidden="true">${String(index + 3).padStart(2, "0")}</span>
     <div class="component-main">
       <h3>${escapeHtml(componentTitle(component))}</h3>
-      <p>${escapeHtml(translate(`componentMessages.${status}`))}</p>
+      <p>${escapeHtml(componentMessage(component))}</p>
     </div>
     ${statusBadge(status)}
     ${details.length ? `<div class="component-details">${details.map((item) => `
@@ -227,12 +248,15 @@ function componentRow(component, index) {
 }
 
 function render(data) {
-  const status = normalizedStatus(data?.overallStatus);
+  const status = normalizedStatus(data?.summaries?.services?.status || data?.overallStatus);
+  const connectionStatus = normalizedStatus(data?.summaries?.connections?.status);
   const components = Array.isArray(data?.components) ? data.components : [];
   const available = components.filter((component) => normalizedStatus(component.status) === "operational").length;
 
   overallCard.className = `overall-card ${status}`;
   overallStatus.textContent = translate(`statuses.${status}`);
+  connectionsCard.className = `overall-card ${connectionStatus}`;
+  connectionsStatus.textContent = translate(`statuses.${connectionStatus}`);
   statusHeadline.innerHTML = translate(`headlines.${status}`);
   summaryText.textContent = translate(`summaries.${status}`);
   checkedAt.textContent = formatCheckedAt(data?.checkedAt);

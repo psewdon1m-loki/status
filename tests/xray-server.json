@@ -1,0 +1,27 @@
+{
+  "log": {"loglevel": "warning"},
+  "inbounds": [{
+    "listen": "0.0.0.0",
+    "port": 19090,
+    "protocol": "vless",
+    "settings": {
+      "clients": [{
+        "id": "11111111-1111-4111-8111-111111111111",
+        "flow": "xtls-rprx-vision"
+      }],
+      "decryption": "none"
+    },
+    "streamSettings": {
+      "network": "raw",
+      "security": "reality",
+      "realitySettings": {
+        "show": false,
+        "target": "www.gstatic.com:443",
+        "serverNames": ["www.gstatic.com"],
+        "privateKey": "oP2dCB4p7a_arTG9Rz3IHlAIwLrUTHlQFLKDMQq9Hnk",
+        "shortIds": ["abcd"]
+      }
+    }
+  }],
+  "outbounds": [{"protocol": "freedom"}]
+}

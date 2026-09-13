@@ -1,0 +1,22 @@
+[Unit]
+Description=Cake Status local update controller
+After=docker.service
+Requires=docker.service
+
+[Service]
+Type=simple
+User=root
+Group=root
+Environment=PYTHONUNBUFFERED=1
+Environment=CAKE_STATUS_UPDATER_GROUP=cake-status-admin
+ExecStart=/usr/bin/python3 /opt/cake-status/deploy/updater_daemon.py
+Restart=on-failure
+RestartSec=3
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectHome=true
+ProtectSystem=strict
+ReadWritePaths=/etc/cake-status /var/lib/cake-status /run/cake-status /opt/cake-status
+
+[Install]
+WantedBy=multi-user.target

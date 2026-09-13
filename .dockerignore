@@ -1,5 +1,7 @@
 .git
 .env
+secrets/status-vless-canaries.json
+dist
 __pycache__
 *.pyc
 tests
