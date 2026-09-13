@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import os
 import tempfile
 import unittest
 from pathlib import Path
@@ -23,6 +24,12 @@ class ReleaseAndEnvironmentTests(unittest.TestCase):
             root = Path(directory)
             secret = root / "canaries.json"
             secret.write_text('{"schemaVersion":1,"probes":{}}', encoding="utf-8")
+            secret.chmod(0o640)
+            secret_gid = secret.stat().st_gid
+            if os.name == "posix" and secret_gid <= 0:
+                os.chown(secret, -1, 100)
+                secret_gid = secret.stat().st_gid
+            configured_gid = secret_gid if os.name == "posix" and secret_gid > 0 else 100
             env = root / "status.env"
             env.write_text("\n".join([
                 "STATUS_VERSION=0.0.1",
@@ -32,9 +39,10 @@ class ReleaseAndEnvironmentTests(unittest.TestCase):
                 "STATUS_ADMIN_TOKEN=" + "b" * 64,
                 "STATUS_ALLOWED_HOSTS=statuscake.shmoza.net,localhost",
                 f"STATUS_VLESS_CANARY_FILE_PATH={secret.resolve()}",
-                "STATUS_SECRET_GID=100",
+                f"STATUS_SECRET_GID={configured_gid}",
                 "STATUS_PORT=18082",
             ]) + "\n", encoding="utf-8")
+            env.chmod(0o600)
             self.assertEqual([], validate_env.validate(env))
 
 
